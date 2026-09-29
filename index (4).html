@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Meadow – Grade 1 Mathematics</title>
+<style>
+  :root{
+    --sky:#dff3ff; --grass:#5cb85c; --sun:#ffc93c; --berry:#e8546b; --plum:#5b3f8c; --ink:#2b2340; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Comic Sans MS","Chalkboard SE","Trebuchet MS",sans-serif;background:var(--sky);color:var(--ink);min-height:100vh;
+    background-image:radial-gradient(circle at 90% 8%,var(--sun) 0 60px,transparent 61px)}
+  header{text-align:center;padding:24px 12px 8px}
+  h1{margin:0;font-size:clamp(2rem,6vw,3.2rem);color:var(--plum)}
+  header p{margin:6px 0 0;font-size:1.2rem}
+  main{max-width:760px;margin:0 auto;padding:12px 16px 90px}
+  .menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:16px}
+  .menu button{font:inherit;font-size:1.3rem;padding:22px 10px;border:none;border-radius:22px;color:#fff;cursor:pointer;
+    box-shadow:0 6px 0 rgba(0,0,0,.2);transition:transform .1s}
+  .menu button:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+  .menu span{display:block;font-size:2.4rem}
+  .c1{background:#e8546b}.c2{background:#3b8fd9}.c3{background:#f08a24}.c4{background:#4aa85a}
+  .panel{background:var(--card);border-radius:26px;padding:22px;margin-top:18px;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.12)}
+  .hidden{display:none}
+  .bar{display:flex;justify-content:space-between;align-items:center;font-size:1.2rem}
+  .back{font:inherit;background:var(--sun);border:none;border-radius:14px;padding:8px 14px;cursor:pointer;color:var(--ink)}
+  .q{font-size:1.6rem;margin:18px 0 8px}
+  .stage{font-size:2.2rem;line-height:1.5;min-height:80px;word-break:break-word}
+  .big{font-size:3.4rem;font-weight:bold;color:var(--plum)}
+  .opts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:14px}
+  .opts button{font:inherit;font-size:2rem;min-width:84px;padding:14px 20px;border-radius:18px;border:4px solid var(--plum);background:#fff;color:var(--plum);cursor:pointer}
+  .opts button:hover,.opts button:focus-visible{background:#f1e9ff}
+  .opts button.right{background:#c9f2c7;border-color:var(--grass);color:#1e6b25}
+  .opts button.wrong{background:#ffd9de;border-color:var(--berry);color:#a3243a}
+  .msg{min-height:2.2rem;font-size:1.5rem;margin-top:14px;font-weight:bold}
+  .next{font:inherit;font-size:1.3rem;background:var(--grass);color:#fff;border:none;border-radius:18px;padding:12px 26px;cursor:pointer;margin-top:8px}
+  .speak{font:inherit;font-size:1.1rem;background:#fff;border:3px solid var(--sun);border-radius:14px;padding:6px 12px;cursor:pointer}
+  button:focus-visible{outline:4px solid var(--ink);outline-offset:2px}
+  footer{position:fixed;bottom:0;left:0;right:0;background:var(--grass);color:#fff;text-align:center;padding:10px;font-size:1.2rem}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌼 Math Meadow</h1>
+  <p>Pick a game and let's learn numbers!</p>
+</header>
+
+<main>
+  <section id="menu" class="menu" aria-label="Choose an activity">
+    <button class="c1" data-mode="count"><span>🍎</span>Counting</button>
+    <button class="c2" data-mode="add"><span>➕</span>Adding</button>
+    <button class="c3" data-mode="sub"><span>➖</span>Taking away</button>
+    <button class="c4" data-mode="compare"><span>⚖️</span>Bigger or smaller</button>
+  </section>
+
+  <section id="game" class="panel hidden" aria-live="polite">
+    <div class="bar">
+      <button class="back" id="back">⬅ Menu</button>
+      <div id="title"></div>
+      <div id="score">⭐ 0</div>
+    </div>
+    <div class="q" id="prompt"></div>
+    <button class="speak" id="speak">🔊 Read to me</button>
+    <div class="stage" id="stage"></div>
+    <div class="opts" id="opts"></div>
+    <div class="msg" id="msg"></div>
+    <button class="next hidden" id="next">Next question</button>
+  </section>
+</main>
+
+<footer id="foot">Grade 1 Mathematics • Play and learn!</footer>
+
+<script>
+const EMOJI = ["🍎","🐟","🌸","⭐","🐥","🎈","🚗","🍓"];
+const $ = id => document.getElementById(id);
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const pick = a => a[rnd(0,a.length-1)];
+let mode, score = 0, answered = false, spoken = "";
+
+const TITLES = {count:"Counting", add:"Adding", sub:"Taking away", compare:"Bigger or smaller"};
+
+// Build 4 unique number choices that include the answer
+function choices(ans, min=0, max=10){
+  const s = new Set([ans]);
+  while(s.size < 4){
+    const n = ans + rnd(-3,3);
+    if(n >= min && n <= max) s.add(n);
+  }
+  return [...s].sort(() => Math.random() - .5);
+}
+
+const makers = {
+  count(){
+    const n = rnd(1,10), e = pick(EMOJI);
+    return {prompt:"How many are there?", stage:e.repeat(n), ans:n, opts:choices(n,1,10),
+      say:`How many ${n} things are there? Count them.`};
+  },
+  add(){
+    const a = rnd(1,5), b = rnd(1,5), e = pick(EMOJI);
+    return {prompt:"How many altogether?", stage:`${e.repeat(a)} <b>+</b> ${e.repeat(b)}<div class="big">${a} + ${b} = ?</div>`,
+      ans:a+b, opts:choices(a+b,0,10), say:`${a} plus ${b} equals what?`};
+  },
+  sub(){
+    const a = rnd(3,10), b = rnd(1,a-1), e = pick(EMOJI);
+    return {prompt:`Take away ${b}. How many are left?`, stage:`${e.repeat(a)}<div class="big">${a} − ${b} = ?</div>`,
+      ans:a-b, opts:choices(a-b,0,10), say:`${a} minus ${b} equals what?`};
+  },
+  compare(){
+    const a = rnd(1,20); let b = rnd(1,20); while(b===a) b = rnd(1,20);
+    const big = Math.random() < .5;
+    return {prompt: big ? "Which number is BIGGER?" : "Which number is SMALLER?",
+      stage:`<span class="big">${a}</span> &nbsp; or &nbsp; <span class="big">${b}</span>`,
+      ans: big ? Math.max(a,b) : Math.min(a,b), opts:[a,b],
+      say: big ? `Which number is bigger, ${a} or ${b}?` : `Which number is smaller, ${a} or ${b}?`};
+  }
+};
+
+function show(id, on){ $(id).classList.toggle("hidden", !on); }
+
+function newQuestion(){
+  answered = false;
+  const q = makers[mode]();
+  $("prompt").textContent = q.prompt;
+  $("stage").innerHTML = q.stage;
+  $("msg").textContent = "";
+  show("next", false);
+  spoken = q.prompt + " " + q.say;
+  const box = $("opts"); box.innerHTML = "";
+  q.opts.forEach(n => {
+    const b = document.createElement("button");
+    b.textContent = n;
+    b.onclick = () => check(b, n, q.ans);
+    box.appendChild(b);
+  });
+}
+
+function check(btn, n, ans){
+  if(answered) return;
+  if(n === ans){
+    answered = true;
+    btn.classList.add("right");
+    score++; $("score").textContent = "⭐ " + score;
+    $("msg").textContent = pick(["🎉 Great job!","🌟 You got it!","👏 Awesome!","🥳 Super!"]);
+    show("next", true);
+  } else {
+    btn.classList.add("wrong");
+    btn.disabled = true;
+    $("msg").textContent = "🤔 Try again!";
+  }
+}
+
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+  mode = b.dataset.mode; score = 0; $("score").textContent = "⭐ 0";
+  $("title").textContent = TITLES[mode];
+  show("menu", false); show("game", true); newQuestion();
+});
+$("back").onclick = () => { show("game", false); show("menu", true); speechSynthesis && speechSynthesis.cancel(); };
+$("next").onclick = newQuestion;
+$("speak").onclick = () => {
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(spoken); u.rate = .85; speechSynthesis.speak(u);
+};
+</script>
+</body>
+</html>
